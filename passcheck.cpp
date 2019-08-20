@@ -24,33 +24,42 @@ int compare_with_hash(char *username, char *password)
     std::string line, salt;
     std::vector<std::string> split, subsplit;
     shadow_file.open("/etc/shadow", std::ifstream::in);
-    while (std::getline(shadow_file, line))
+    if (shadow_file.is_open())
     {
-        split = string_split(line, ':');
-        // Find username in shadow file
-        if (split[0] == username)
+        while (std::getline(shadow_file, line))
         {
-            // Extract salt and hash
-            subsplit = string_split(split[1], '$');
-            salt = "$" + subsplit[1] + "$" + subsplit[2];
-            std::string hashed_password = salt + "$" + subsplit[3];
-            char salt_char[salt.size() + 1];
-            salt.copy(salt_char, salt.size() + 1);
-            salt_char[salt.size()] = '\0';
-            // Generate our own hash
-            char *encrypted_password = crypt(password, salt_char);
-            // Compare the hashes
-            if (encrypted_password == hashed_password)
+            split = string_split(line, ':');
+            // Find username in shadow file
+            if (split[0] == username)
             {
-                return true;
+                // Extract salt and hash
+                subsplit = string_split(split[1], '$');
+                salt = "$" + subsplit[1] + "$" + subsplit[2];
+                std::string hashed_password = salt + "$" + subsplit[3];
+                // Convert the salt string to char[] for crypt function
+                char salt_char[salt.size() + 1];
+                salt.copy(salt_char, salt.size() + 1);
+                salt_char[salt.size()] = '\0';
+                // Generate our own hash with the salt
+                char *encrypted_password = crypt(password, salt_char);
+                // Compare the hashes
+                if (encrypted_password == hashed_password)
+                {
+                    return true;
+                }
             }
         }
+        shadow_file.close();
     }
-    shadow_file.close();
+    else
+    {
+        std::cout << "Cannot open file\n";
+    }
     return false;
 }
 int main()
 {
+    int returncode = 0;
     char username[8];
     char password[128];
     // Fetch username from stdin
@@ -67,6 +76,7 @@ int main()
     else
     {
         std::cout << "PASSWORD DOES NOT MATCH" << std::endl;
+        returncode = 1;
     }
-    return 0;
+    return returncode;
 }
